@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Squeeze – free PDF compressor, no size limit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<style>
+:root{--bg:#eef1f7;--surface:#fff;--ink:#101a3a;--muted:#5b6585;--line:#d3d9e8;--accent:#2b50ff;--accent-ink:#fff;--good:#0a8f5b;--bad:#c0392b;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0c1226;--surface:#151d38;--ink:#eaeefc;--muted:#97a2c6;--line:#2a3560;--accent:#6f8bff;--accent-ink:#0c1226;--good:#3ddc97;--bad:#ff8a7a}}
+:root[data-theme="dark"]{--bg:#0c1226;--surface:#151d38;--ink:#eaeefc;--muted:#97a2c6;--line:#2a3560;--accent:#6f8bff;--accent-ink:#0c1226;--good:#3ddc97;--bad:#ff8a7a}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Bricolage Grotesque",system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.5}
+main{max-width:860px;margin:0 auto;padding:40px 20px 64px}
+h1{font-size:clamp(2.4rem,7vw,4.4rem);line-height:1;letter-spacing:-.03em;font-weight:800;margin:0 0 14px}
+.lede{font-size:1.15rem;color:var(--muted);max-width:52ch;margin:0 0 28px}
+.drop{display:block;border:2px dashed var(--accent);border-radius:20px;background:var(--surface);padding:44px 20px;text-align:center;cursor:pointer;transition:background .15s,transform .15s}
+.drop:hover,.drop.over{background:color-mix(in srgb,var(--accent) 10%,var(--surface));transform:scale(1.01)}
+.drop:focus-within{outline:3px solid var(--accent);outline-offset:3px}
+.drop input{position:absolute;opacity:0;width:1px;height:1px}
+.drop b{display:block;font-size:1.5rem;letter-spacing:-.01em}
+.drop span{color:var(--muted)}
+fieldset{border:0;padding:0;margin:26px 0 8px}
+legend{font-weight:600;margin-bottom:10px}
+.levels{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.levels label{border:1.5px solid var(--line);background:var(--surface);border-radius:14px;padding:12px 14px;cursor:pointer}
+.levels input{position:absolute;opacity:0}
+.levels label:has(input:checked){border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
+.levels label:has(input:focus-visible){outline:3px solid var(--accent);outline-offset:2px}
+.levels strong{display:block}.levels small{color:var(--muted)}
+ul{list-style:none;margin:28px 0 0;padding:0;display:grid;gap:14px}
+li{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 18px}
+.row{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.name{font-weight:600;overflow-wrap:anywhere;flex:1 1 220px}
+.bar{height:12px;border-radius:99px;background:var(--line);margin:12px 0 8px;position:relative;overflow:hidden}
+.bar i{position:absolute;inset:0 auto 0 0;background:var(--accent);width:0;border-radius:99px;transition:width .25s}
+.bar i.done{background:var(--good)}
+.meta{color:var(--muted);font-size:.95rem}
+.saved{color:var(--good);font-weight:800;font-size:1.3rem}
+button{font:inherit;font-weight:600;border:0;border-radius:12px;padding:10px 18px;cursor:pointer;background:var(--accent);color:var(--accent-ink)}
+button.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.actions{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap}
+.err{color:var(--bad)}
+.notes{margin-top:44px;display:grid;gap:14px;color:var(--muted);max-width:62ch}
+.notes h2{color:var(--ink);font-size:1.15rem;margin:0}.notes p{margin:0}
+.hidden{display:none}
+@media (max-width:560px){.levels{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<main>
+  <h1>Squeeze your PDFs. Any size.</h1>
+  <p class="lede">Free PDF compressor with no file-size limit and no upload. Everything runs in your browser, so your files never leave your device.</p>
+
+  <label class="drop" id="drop">
+    <input type="file" id="pick" accept="application/pdf,.pdf" multiple>
+    <b>Drop PDFs here or tap to choose</b>
+    <span>Add as many files as you like, of any size</span>
+  </label>
+
+  <fieldset>
+    <legend>Compression level</legend>
+    <div class="levels">
+      <label><input type="radio" name="lvl" value="high"><strong>High quality</strong><small>Near-original, about 220 dpi</small></label>
+      <label><input type="radio" name="lvl" value="light"><strong>Light</strong><small>Sharp, about 130 dpi</small></label>
+      <label><input type="radio" name="lvl" value="balanced" checked><strong>Balanced</strong><small>Good quality, about 100 dpi</small></label>
+      <label><input type="radio" name="lvl" value="max"><strong>Maximum</strong><small>Smallest file, about 72 dpi</small></label>
+    </div>
+  </fieldset>
+
+  <ul id="list" aria-live="polite"></ul>
+  <div class="actions hidden" id="actions"><button id="go">Compress all</button><button class="ghost" id="clear">Clear list</button></div>
+
+  <section class="notes">
+    <h2>How it works</h2>
+    <p>Each page is redrawn as an optimized image and rebuilt into a new PDF on your own device. That is why there is no size limit: the only limit is your device’s memory.</p>
+    <h2>Good to know</h2>
+    <p>Text in the compressed file becomes part of the page image, so it can’t be selected or searched. This works best for scans, slides and photo-heavy files. If a file can’t get any smaller, Squeeze keeps your original instead of making it bigger.</p>
+  </section>
+</main>
+
+<script>
+(function(){
+  var LV={high:{s:220/72,q:.93},light:{s:130/72,q:.8},balanced:{s:100/72,q:.62},max:{s:1,q:.42}};
+  var files=[],uid=0;
+  var $=function(i){return document.getElementById(i)};
+  var list=$('list'),actions=$('actions'),drop=$('drop');
+  try{pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'}catch(e){}
+
+  function fmt(n){if(n<1024)return n+' B';if(n<1048576)return (n/1024).toFixed(1)+' KB';if(n<1073741824)return (n/1048576).toFixed(2)+' MB';return (n/1073741824).toFixed(2)+' GB'}
+  function level(){return LV[document.querySelector('input[name=lvl]:checked').value]}
+  function tick(){return new Promise(function(r){setTimeout(r,0)})}
+
+  function add(fl){
+    Array.prototype.forEach.call(fl,function(f){
+      if(f.type!=='application/pdf'&&!/\.pdf$/i.test(f.name))return;
+      files.push({id:++uid,file:f,state:'ready',pct:0,out:null,msg:''});
+    });
+    render();
+  }
+
+  function render(){
+    list.innerHTML='';
+    files.forEach(function(f){
+      var li=document.createElement('li');
+      var top=document.createElement('div');top.className='row';
+      var nm=document.createElement('div');nm.className='name';nm.textContent=f.file.name;
+      top.appendChild(nm);
+      if(f.state==='done'){
+        var pct=Math.max(0,Math.round((1-f.out.size/f.file.size)*100));
+        var sv=document.createElement('div');sv.className='saved';sv.textContent=pct>0?'−'+pct+'%':'Already small';top.appendChild(sv);
+        var b=document.createElement('button');b.textContent='Download';b.onclick=function(){save(f)};top.appendChild(b);
+      }
+      li.appendChild(top);
+      var bar=document.createElement('div');bar.className='bar';
+      var fill=document.createElement('i');fill.style.width=(f.state==='done'?100:f.pct)+'%';if(f.state==='done')fill.className='done';
+      bar.appendChild(fill);li.appendChild(bar);
+      var m=document.createElement('div');m.className='meta';
+      if(f.state==='done')m.textContent=fmt(f.file.size)+' → '+fmt(f.out.size)+(f.kept?' (original kept, could not shrink further)':'');
+      else if(f.state==='error'){m.className='meta err';m.textContent=f.msg}
+      else if(f.state==='working')m.textContent=f.msg||'Compressing…';
+      else m.textContent=fmt(f.file.size)+' · ready';
+      li.appendChild(m);
+      list.appendChild(li);
+    });
+    actions.classList.toggle('hidden',!files.length);
+  }
+
+  async function compress(f){
+    var L=level();f.state='working';f.pct=0;f.msg='Reading file…';render();
+    var buf=await f.file.arrayBuffer();
+    var src=await pdfjsLib.getDocument({data:buf}).promise;
+    var out=await PDFLib.PDFDocument.create();
+    var n=src.numPages;
+    for(var p=1;p<=n;p++){
+      var page=await src.getPage(p);
+      var base=page.getViewport({scale:1});
+      var s=L.s,maxPx=16e6;
+      if(base.width*base.height*s*s>maxPx)s=Math.sqrt(maxPx/(base.width*base.height));
+      var vp=page.getViewport({scale:s});
+      var c=document.createElement('canvas');c.width=Math.ceil(vp.width);c.height=Math.ceil(vp.height);
+      var ctx=c.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);
+      await page.render({canvasContext:ctx,viewport:vp}).promise;
+      var blob=await new Promise(function(r){c.toBlob(r,'image/jpeg',L.q)});
+      var img=await out.embedJpg(new Uint8Array(await blob.arrayBuffer()));
+      var pg=out.addPage([base.width,base.height]);
+      pg.drawImage(img,{x:0,y:0,width:base.width,height:base.height});
+      c.width=c.height=0;page.cleanup();
+      f.pct=Math.round(p/n*100);f.msg='Page '+p+' of '+n;render();await tick();
+    }
+    var bytes=await out.save({useObjectStreams:true});
+    src.destroy();
+    var res=new Blob([bytes],{type:'application/pdf'});
+    f.kept=res.size>=f.file.size;
+    f.out=f.kept?f.file:res;f.state='done';render();
+  }
+
+  async function runAll(){
+    $('go').disabled=true;
+    for(var i=0;i<files.length;i++){
+      var f=files[i];if(f.state==='done'||f.state==='working')continue;
+      try{await compress(f)}catch(e){f.state='error';f.msg='Could not read this PDF. It may be damaged or password-protected.';render()}
+    }
+    $('go').disabled=false;
+  }
+
+  async function save(f){
+    var name=f.file.name.replace(/\.pdf$/i,'')+'-squeezed.pdf';
+    var dl=null;
+    try{dl=window.claude&&await claude.use('downloads')}catch(e){}
+    if(dl){try{await dl.save({filename:name,data:f.out})}catch(e){}return}
+    var a=document.createElement('a');a.href=URL.createObjectURL(f.out);a.download=name;document.body.appendChild(a);a.click();
+    setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},4000);
+  }
+
+  $('pick').addEventListener('change',function(e){add(e.target.files);e.target.value=''});
+  $('go').onclick=runAll;
+  $('clear').onclick=function(){files=[];render()};
+  ['dragenter','dragover'].forEach(function(t){drop.addEventListener(t,function(e){e.preventDefault();drop.classList.add('over')})});
+  ['dragleave','drop'].forEach(function(t){drop.addEventListener(t,function(e){e.preventDefault();drop.classList.remove('over')})});
+  drop.addEventListener('drop',function(e){add(e.dataTransfer.files)});
+})();
+</script>
+</body>
+</html>
